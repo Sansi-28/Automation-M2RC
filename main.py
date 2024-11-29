@@ -2,37 +2,58 @@ import subprocess
 import os
 import math
 import cv2
+from PIL import Image, ImageDraw, ImageFont
 import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog
+import numpy as np
 
 
-def add_text_overlay(input_file, output_file, top_text, bottom_text, width, height, font_scale=1.5, thickness=2):
+
+def add_text_overlay(input_file, output_file, top_text, bottom_text, width, height, font_path="arial.ttf", font_size=50):
     cap = cv2.VideoCapture(input_file)
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     fps = int(cap.get(cv2.CAP_PROP_FPS))
     out = cv2.VideoWriter(output_file, fourcc, fps, (width, height))
+
+    # Load the font
+    try:
+        font = ImageFont.truetype(font_path, font_size)
+    except IOError:
+        messagebox.showerror("Error", f"Font file not found: {font_path}")
+        return
 
     while True:
         ret, frame = cap.read()
         if not ret:
             break
 
+        # Convert the frame (OpenCV -> PIL)
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        pil_image = Image.fromarray(frame)
+        draw = ImageDraw.Draw(pil_image)
+
         # Add top text
-        text_size = cv2.getTextSize(top_text, cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)[0]
-        top_text_x = (frame.shape[1] - text_size[0]) // 2
+        top_text_bbox = draw.textbbox((0, 0), top_text, font=font)
+        top_text_width = top_text_bbox[2] - top_text_bbox[0]
+        top_text_x = (width - top_text_width) // 2
         top_text_y = 300  # Top margin
-        cv2.putText(frame, top_text, (top_text_x, top_text_y), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (255, 255, 255), thickness)
+        draw.text((top_text_x, top_text_y), top_text, font=font, fill="white")
 
         # Add bottom text
-        text_size = cv2.getTextSize(bottom_text, cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)[0]
-        bottom_text_x = (frame.shape[1] - text_size[0]) // 2
-        bottom_text_y = frame.shape[0] - 300  # Bottom margin
-        cv2.putText(frame, bottom_text, (bottom_text_x, bottom_text_y), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (255, 255, 255), thickness)
+        bottom_text_bbox = draw.textbbox((0, 0), bottom_text, font=font)
+        bottom_text_width = bottom_text_bbox[2] - bottom_text_bbox[0]
+        bottom_text_x = (width - bottom_text_width) // 2
+        bottom_text_y = height - 300  # Bottom margin
+        draw.text((bottom_text_x, bottom_text_y), bottom_text, font=font, fill="white")
+
+        # Convert the frame back (PIL -> OpenCV)
+        frame = cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
 
         out.write(frame)
 
     cap.release()
     out.release()
+
 
 
 def create_reels(input_file, output_folder, movie_name, reel_duration=80):
