@@ -7,7 +7,41 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog
 import numpy as np
 
+def add_audio_to_video(video_file, audio_file, output_file):
+    command = [
+        "ffmpeg",
+        "-i", video_file,
+        "-i", audio_file,
+        "-c:v", "copy",
+        "-c:a", "aac",
+        "-strict", "experimental",
+        output_file
+    ]
+    subprocess.run(command, check=True)
 
+def add_text_overlay_with_audio(input_file, output_file, top_text, bottom_text, width, height, font_path="arial.ttf", font_size=50):
+    # Temporary files for processing
+    temp_video_file = "temp_video.mp4"
+    temp_audio_file = "temp_audio.aac"
+
+    # Extract audio from input file
+    subprocess.run([
+        "ffmpeg",
+        "-i", input_file,
+        "-vn",  # No video
+        "-acodec", "copy",
+        temp_audio_file
+    ], check=True)
+
+    # Add text overlay to the video
+    add_text_overlay(input_file, temp_video_file, top_text, bottom_text, width, height, font_path, font_size)
+
+    # Add the original audio back to the processed video
+    add_audio_to_video(temp_video_file, temp_audio_file, output_file)
+
+    # Cleanup temporary files
+    os.remove(temp_video_file)
+    os.remove(temp_audio_file)
 
 def add_text_overlay(input_file, output_file, top_text, bottom_text, width, height, font_path="arial.ttf", font_size=50):
     cap = cv2.VideoCapture(input_file)
@@ -53,8 +87,6 @@ def add_text_overlay(input_file, output_file, top_text, bottom_text, width, heig
 
     cap.release()
     out.release()
-
-
 
 def create_reels(input_file, output_folder, movie_name, reel_duration=80):
     os.makedirs(output_folder, exist_ok=True)
@@ -105,10 +137,10 @@ def create_reels(input_file, output_folder, movie_name, reel_duration=80):
             subprocess.run(command, check=True, capture_output=True)
             print(f"Temporary reel saved: {temp_output_file}")
 
-            # Add text overlay
+            # Add text overlay with audio
             top_text = movie_name
             bottom_text = f"Part {i + 1}"
-            add_text_overlay(temp_output_file, final_output_file, top_text, bottom_text, target_width, target_height)
+            add_text_overlay_with_audio(temp_output_file, final_output_file, top_text, bottom_text, target_width, target_height)
 
             os.remove(temp_output_file)  # Clean up temporary file
             print(f"Final reel saved: {final_output_file}")
@@ -121,7 +153,6 @@ def create_reels(input_file, output_folder, movie_name, reel_duration=80):
     print("Reel generation completed!")
     messagebox.showinfo("Success", "Reel generation completed!")
 
-
 def select_input_file():
     file_path = filedialog.askopenfilename(
         title="Select Video File",
@@ -129,11 +160,9 @@ def select_input_file():
     )
     input_file_var.set(file_path)
 
-
 def select_output_folder():
     folder_path = filedialog.askdirectory(title="Select Output Folder")
     output_folder_var.set(folder_path)
-
 
 def start_processing():
     input_file = input_file_var.get()
@@ -150,7 +179,6 @@ def start_processing():
         return
 
     create_reels(input_file, output_folder, movie_name, reel_duration)
-
 
 # Tkinter UI Setup
 root = tk.Tk()
@@ -176,10 +204,9 @@ tk.Entry(root, textvariable=movie_name_var, width=50).grid(row=2, column=1, padx
 # Reel duration
 tk.Label(root, text="Reel Duration (seconds):").grid(row=3, column=0, padx=10, pady=5, sticky="w")
 reel_duration_var = tk.StringVar(value="80")
-tk.Entry(root, textvariable=reel_duration_var, width=20).grid(row=3, column=1, padx=10, pady=5, sticky="w")
+tk.Entry(root, textvariable=reel_duration_var, width=20).grid(row=3, column=1, padx=10, pady=5)
 
-# Process button
-tk.Button(root, text="Generate Reels", command=start_processing, bg="green", fg="white").grid(row=4, column=0, columnspan=3, pady=10)
+# Start button
+tk.Button(root, text="Generate Reels", command=start_processing).grid(row=4, column=0, columnspan=3, pady=20)
 
-# Run the application
 root.mainloop()
