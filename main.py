@@ -8,48 +8,54 @@ from tkinter import filedialog, messagebox, simpledialog
 import numpy as np
 
 def add_audio_to_video(video_file, audio_file, output_file):
+    """Combine video and audio with optimal encoding."""
     command = [
         "ffmpeg",
         "-i", video_file,
         "-i", audio_file,
-        "-c:v", "copy",
-        "-c:a", "aac",
-        "-strict", "experimental",
+        "-c:v", "libx264",  # Widely supported H.264 video codec
+        "-preset", "medium",  # Balanced encoding quality
+        "-profile:v", "baseline",  # Maximum compatibility
+        "-level", "3.0",  # Broad device support
+        "-c:a", "aac",  # AAC audio codec
+        "-b:a", "128k",  # Standard audio bitrate
+        "-movflags", "+faststart",  # Web optimization
         output_file
     ]
     subprocess.run(command, check=True)
 
 def add_text_overlay_with_audio(input_file, output_file, top_text, bottom_text, width, height, font_path="arial.ttf", font_size=50):
-    # Temporary files for processing
+    """Add text overlay while preserving original audio."""
     temp_video_file = "temp_video.mp4"
     temp_audio_file = "temp_audio.aac"
 
-    # Extract audio from input file
+    # Extract audio
     subprocess.run([
         "ffmpeg",
         "-i", input_file,
-        "-vn",  # No video
-        "-acodec", "copy",
+        "-vn",
+        "-acodec", "aac",
+        "-b:a", "128k",
         temp_audio_file
     ], check=True)
 
-    # Add text overlay to the video
+    # Add text overlay
     add_text_overlay(input_file, temp_video_file, top_text, bottom_text, width, height, font_path, font_size)
 
-    # Add the original audio back to the processed video
+    # Combine video and audio
     add_audio_to_video(temp_video_file, temp_audio_file, output_file)
 
-    # Cleanup temporary files
+    # Cleanup
     os.remove(temp_video_file)
     os.remove(temp_audio_file)
 
 def add_text_overlay(input_file, output_file, top_text, bottom_text, width, height, font_path="arial.ttf", font_size=50):
+    """Add text overlay to video frames."""
     cap = cv2.VideoCapture(input_file)
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     fps = int(cap.get(cv2.CAP_PROP_FPS))
     out = cv2.VideoWriter(output_file, fourcc, fps, (width, height))
 
-    # Load the font
     try:
         font = ImageFont.truetype(font_path, font_size)
     except IOError:
@@ -61,38 +67,47 @@ def add_text_overlay(input_file, output_file, top_text, bottom_text, width, heig
         if not ret:
             break
 
-        # Convert the frame (OpenCV -> PIL)
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         pil_image = Image.fromarray(frame)
         draw = ImageDraw.Draw(pil_image)
 
-        # Add top text
+        # Top text positioning
         top_text_bbox = draw.textbbox((0, 0), top_text, font=font)
         top_text_width = top_text_bbox[2] - top_text_bbox[0]
         top_text_x = (width - top_text_width) // 2
-        top_text_y = 300  # Top margin
-        draw.text((top_text_x, top_text_y), top_text, font=font, fill="white")
+        top_text_y = 50  # Reduced top margin for better visibility
 
-        # Add bottom text
+        # Bottom text positioning
         bottom_text_bbox = draw.textbbox((0, 0), bottom_text, font=font)
         bottom_text_width = bottom_text_bbox[2] - bottom_text_bbox[0]
         bottom_text_x = (width - bottom_text_width) // 2
-        bottom_text_y = height - 300  # Bottom margin
+        bottom_text_y = height - 100  # Reduced bottom margin
+
+        # Draw text with black outline for better readability
+        draw.text((top_text_x-2, top_text_y-2), top_text, font=font, fill="black")
+        draw.text((top_text_x+2, top_text_y-2), top_text, font=font, fill="black")
+        draw.text((top_text_x-2, top_text_y+2), top_text, font=font, fill="black")
+        draw.text((top_text_x+2, top_text_y+2), top_text, font=font, fill="black")
+        draw.text((top_text_x, top_text_y), top_text, font=font, fill="white")
+
+        draw.text((bottom_text_x-2, bottom_text_y-2), bottom_text, font=font, fill="black")
+        draw.text((bottom_text_x+2, bottom_text_y-2), bottom_text, font=font, fill="black")
+        draw.text((bottom_text_x-2, bottom_text_y+2), bottom_text, font=font, fill="black")
+        draw.text((bottom_text_x+2, bottom_text_y+2), bottom_text, font=font, fill="black")
         draw.text((bottom_text_x, bottom_text_y), bottom_text, font=font, fill="white")
 
-        # Convert the frame back (PIL -> OpenCV)
         frame = cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
-
         out.write(frame)
 
     cap.release()
     out.release()
 
 def create_reels(input_file, output_folder, movie_name, reel_duration=80):
+    """Generate Instagram Reels-compatible video clips."""
     os.makedirs(output_folder, exist_ok=True)
 
     try:
-        # Get video duration
+        # Fetch video duration
         duration_output = subprocess.check_output([
             "ffprobe",
             "-v", "error",
@@ -101,11 +116,13 @@ def create_reels(input_file, output_folder, movie_name, reel_duration=80):
             input_file
         ]).decode().strip()
         total_duration = float(duration_output)
-        print(f"Total video duration: {total_duration:.2f} seconds")
     except Exception as e:
-        print(f"Error fetching video duration: {e}")
-        messagebox.showerror("Error", "Could not fetch video duration.")
+        messagebox.showerror("Error", f"Could not fetch video duration: {e}")
         return
+
+    # Instagram Reels recommended dimensions
+    target_width = 1080
+    target_height = 1920
 
     num_reels = math.ceil(total_duration / reel_duration)
 
@@ -114,45 +131,45 @@ def create_reels(input_file, output_folder, movie_name, reel_duration=80):
         temp_output_file = os.path.join(output_folder, f"temp_reel_part_{i + 1}.mp4")
         final_output_file = os.path.join(output_folder, f"reel_part_{i + 1}.mp4")
 
-        # Define the target 9:16 resolution
-        target_width = 720  # Set width (you can adjust this)
-        target_height = 1280  # Set height for 9:16 ratio
-
-        # FFmpeg command to resize to 9:16 without zooming (padding to fit)
+        # Advanced scaling and cropping command
         command = [
             "ffmpeg",
             "-i", input_file,
             "-ss", str(start_time),
             "-t", str(reel_duration),
-            "-vf", f"scale={target_width}:-1,pad={target_width}:{target_height}:0:(oh-ih)/2",  # Scale and pad
-            "-c:v", "libx264",  # Video codec
-            "-c:a", "aac",  # Audio codec
-            "-strict", "experimental",  # To use AAC encoding
+            "-vf", f"scale=iw*min({target_width}/iw\\,{target_height}/ih):ih*min({target_width}/iw\\,{target_height}/ih),crop={target_width}:{target_height}",
+            "-c:v", "libx264",
+            "-preset", "medium",
+            "-profile:v", "baseline",
+            "-level", "3.0",
+            "-crf", "23",  # High-quality, reasonable file size
+            "-c:a", "aac",
+            "-b:a", "128k",
+            "-movflags", "+faststart",
+            "-f", "mp4",
             temp_output_file
         ]
 
-        print(f"Generating Reel {i + 1}/{num_reels}...")
-
         try:
             subprocess.run(command, check=True, capture_output=True)
-            print(f"Temporary reel saved: {temp_output_file}")
 
-            # Add text overlay with audio
+            # Add text overlay with audio preservation
             top_text = movie_name
             bottom_text = f"Part {i + 1}"
             add_text_overlay_with_audio(temp_output_file, final_output_file, top_text, bottom_text, target_width, target_height)
 
-            os.remove(temp_output_file)  # Clean up temporary file
-            print(f"Final reel saved: {final_output_file}")
+            os.remove(temp_output_file)  # Clean temporary files
 
         except subprocess.CalledProcessError as e:
-            print(f"Error generating reel {i + 1}: {e}")
+            messagebox.showerror("Error", f"Reel generation failed: {e}")
+            return
         except Exception as e:
-            print(f"Error processing text overlay for reel {i + 1}: {e}")
+            messagebox.showerror("Error", f"Unexpected error: {e}")
+            return
 
-    print("Reel generation completed!")
-    messagebox.showinfo("Success", "Reel generation completed!")
+    messagebox.showinfo("Success", "Reels generated successfully!")
 
+# Rest of the Tkinter UI code remains the same as in the original script
 def select_input_file():
     file_path = filedialog.askopenfilename(
         title="Select Video File",
