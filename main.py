@@ -26,13 +26,16 @@ def add_audio_to_video(video_file, audio_file, output_file):
         "ffmpeg",
         "-i", video_file,
         "-i", audio_file,
-        "-c:v", "libx264",  # Widely supported H.264 video codec
-        "-preset", "medium",  # Balanced encoding quality
-        "-profile:v", "baseline",  # Maximum compatibility
-        "-level", "3.0",  # Broad device support
-        "-c:a", "aac",  # AAC audio codec
-        "-b:a", "128k",  # Standard audio bitrate
-        "-movflags", "+faststart",  # Web optimization
+        "-map", "0:v:0",  # Map the first video stream
+        "-map", "1:a:0",  # Map the first audio stream
+        "-c:v", "libx264",  # Video codec
+        "-preset", "medium",
+        "-profile:v", "baseline",
+        "-level", "3.0",
+        "-c:a", "aac",  # Audio codec
+        "-b:a", "128k",
+        "-shortest",  # Stops encoding at the shortest input
+        "-movflags", "+faststart",
         output_file
     ]
     subprocess.run(command, check=True)
@@ -148,32 +151,30 @@ def create_reels(input_file, output_folder, movie_name, reel_duration=80):
         temp_output_file = os.path.join(output_folder, f"temp_reel_part_{i + 1}.mp4")
         final_output_file = os.path.join(output_folder, f"reel_part_{i + 1}.mp4")
 
-        # Universal 9:16 conversion command
-             # Universal 9:16 conversion command without zooming
         command = [
             "ffmpeg",
             "-i", input_file,
             "-ss", str(start_time),
             "-t", str(reel_duration),
             "-vf", (
-                "scale=iw*min(1080/iw\\,1920/ih):ih*min(1080/iw\\,1920/ih),"  # Fit video inside 1080x1920
-                "pad=1080:1920:(1080-iw*min(1080/iw\\,1920/ih))/2:(1920-ih*min(1080/iw\\,1920/ih))/2"  # Add padding
+                "scale=iw*min(1080/iw\\,1920/ih):ih*min(1080/iw\\,1920/ih),"
+                "pad=1080:1920:(1080-iw*min(1080/iw\\,1920/ih))/2:(1920-ih*min(1080/iw\\,1920/ih))/2"
             ),
             "-c:v", "libx264",
             "-preset", "medium",
             "-profile:v", "baseline",
             "-level", "3.0",
-            "-crf", "23",  # High-quality, reasonable file size
+            "-crf", "23",
             "-c:a", "aac",
             "-b:a", "128k",
             "-movflags", "+faststart",
-            "-f", "mp4",
+            "-copyts",  # Retain original timestamps
+            "-start_at_zero",
             temp_output_file
         ]
 
-
         try:
-            subprocess.run(command, check=True, capture_output=True)
+            subprocess.run(command, check=True)
 
             # Add text overlay with audio preservation
             top_text = movie_name
@@ -190,6 +191,9 @@ def create_reels(input_file, output_folder, movie_name, reel_duration=80):
             return
 
     messagebox.showinfo("Success", "Reels generated successfully!")
+
+# Tkinter UI Setup remains the same...
+
 
 def start_processing(input_file_var, output_folder_var, movie_name_var, reel_duration_var):
     """Process the reel generation based on UI inputs."""
