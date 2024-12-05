@@ -1,85 +1,126 @@
-# Automation - M2RS
+# Automation-M2RC
 
-This Python application converts a video file into multiple Instagram-style reels, complete with text overlays for movie titles and part numbers. The application uses Tkinter for the graphical user interface (GUI) and FFmpeg for video processing.
+A Python-based tool to convert movies into Instagram Reel-compatible videos with customizable text overlays and preserved audio. This tool allows users to split a movie into multiple reels, add top and bottom text, and ensure compatibility with Instagram's recommended dimensions.
 
 ## Features
-- Split a movie into reels of specified duration.
-- Add custom top and bottom text overlays.
-- Automatically resize and pad videos to a 9:16 aspect ratio.
-- Simple GUI for user interaction.
+
+- **Split Videos into Reels**: Automatically split input videos into segments of specified durations.
+- **Text Overlays**: Add custom top and bottom text to each reel segment with centered alignment and outlined text for better visibility.
+- **Audio Preservation**: Retain the original audio while processing the video.
+- **Instagram Compatibility**: Ensure the video is resized and padded to 1080x1920 resolution.
+- **User-Friendly UI**: Built using Tkinter for an intuitive graphical interface.
+- **Error Handling**: Provides clear error messages for missing files or invalid inputs.
+- **Temporary File Cleanup**: Automatically removes intermediate files after processing.
+
+## Prerequisites
+
+### Python Dependencies
+Install the required Python libraries:
+```bash
+pip install pillow opencv-python-headless numpy
 
 ## Requirements
-- Python 3.x
-- FFmpeg installed and available in the system PATH.
-- Required Python packages:
-  - `opencv-python`
-  - `tkinter`
 
-## How to Use
-
-### Step 1: Install Dependencies
-Install the required Python packages:
+### Python Dependencies
+Install the required Python libraries:
 ```bash
-pip install opencv-python
+pip install pillow opencv-python-headless numpy
 ```
 
-Ensure FFmpeg is installed on your system. You can download it from [FFmpeg's official website](https://ffmpeg.org/) and add it to your PATH.
+### External Tools
+- **FFmpeg** and **FFprobe**: Required for video processing. Ensure they are installed and available in your system's PATH.
+  - [Download FFmpeg](https://ffmpeg.org/download.html)
 
-### Step 2: Run the Application
-Execute the script:
-```bash
-python movie_to_reel_converter.py
-```
-
-### Step 3: Use the GUI
-1. **Select Video File:** Browse and select the video file you want to convert.
-2. **Select Output Folder:** Choose a directory to save the generated reels.
-3. **Enter Movie Name:** Provide the title of the movie to appear as the top text overlay.
-4. **Set Reel Duration:** Specify the duration (in seconds) for each reel.
-5. **Generate Reels:** Click the "Generate Reels" button to start processing.
-
-### Output
-The application generates reels in the specified output folder with the following naming convention:
-```
-reel_part_1.mp4
-reel_part_2.mp4
-...
-```
-Each reel includes:
-- Top text: The movie name.
-- Bottom text: Part number.
-
-## Code Structure
-### Key Functions
-- **`add_text_overlay`:** Adds text overlays to the video.
-- **`create_reels`:** Splits the video into parts and applies the required formatting and overlays.
-- **`select_input_file`:** Opens a file dialog for selecting the video.
-- **`select_output_folder`:** Opens a dialog to choose the output folder.
-- **`start_processing`:** Validates inputs and initiates reel generation.
-
-### GUI Design
-The GUI is built using Tkinter, featuring:
-- Input fields for video file, output folder, movie name, and reel duration.
-- Buttons for file/folder selection and processing.
-- Informative error and success messages.
-
-## Troubleshooting
-### Common Issues
-- **FFmpeg not found:** Ensure FFmpeg is installed and added to the system PATH.
-- **Invalid video file:** Use supported formats such as `.mp4`, `.mkv`, or `.avi`.
-- **Reel duration not a number:** Enter a valid numeric value for the duration.
-
-### Logs
-Console logs provide progress updates and error messages to help debug issues.
-
-## License
-This project is open-source and available under the MIT License.
-
-## Acknowledgments
-- FFmpeg: For video processing capabilities.
-- OpenCV: For adding text overlays to frames.
+### Font File
+A valid `.ttf` font file (e.g., `arial.ttf`) is needed for text overlays. The default font path in the code is `arial.ttf`.
 
 ---
 
-Feel free to customize the script and adapt it for your needs!
+## Installation
 
+1. Clone this repository:
+   ```bash
+   git clone https://github.com/Sansi-28/Automation-M2RC.git
+   cd Automation-M2RC
+   ```
+
+2. Install the required Python dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. Ensure `ffmpeg` and `ffprobe` are installed on your system and accessible from the command line.
+
+---
+
+## Usage
+
+### Running the Application
+1. Run the main script:
+   ```bash
+   python main.py
+   ```
+
+2. Use the graphical interface to:
+   - Select a video file as the input.
+   - Choose an output folder to save the reels.
+   - Enter the movie name (displayed as top text).
+   - Specify the reel duration (default is 80 seconds).
+
+3. Click the "Generate Reels" button. The tool will:
+   - Split the video into reels of the specified duration.
+   - Resize and pad the video to 1080x1920 resolution.
+   - Add text overlays for each segment.
+   - Retain the original audio.
+
+### Output
+- The reels will be saved in the selected output folder.
+- Each reel will include:
+  - **Top text**: The movie name.
+  - **Bottom text**: Reel part number (e.g., "Part 1").
+
+---
+
+## Example Workflow
+
+1. Open the tool.
+2. Select `movie.mp4` as the input video.
+3. Choose an output folder (e.g., `./output/`).
+4. Enter the movie name as `My Movie`.
+5. Set the reel duration to `80` seconds.
+6. Click **Generate Reels**.
+7. The tool splits `movie.mp4` into multiple reels (e.g., `reel_part_1.mp4`, `reel_part_2.mp4`) and saves them in the `./output/` folder.
+
+---
+
+## Troubleshooting
+
+1. **FFmpeg/FFprobe Not Found**:
+   - Ensure FFmpeg is installed and added to your system's PATH. Test it by running `ffmpeg -version` in the terminal.
+
+2. **Font Not Found**:
+   - Make sure the `.ttf` font file exists and the `font_path` in the script points to it.
+
+3. **Slow Processing**:
+   - Video processing speed depends on your system's resources. For faster processing, ensure the system has sufficient RAM and CPU power.
+
+---
+
+## Contributing
+
+Contributions are welcome! If you find a bug or have suggestions for improvements, please open an issue or submit a pull request.
+
+---
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+---
+
+## Acknowledgments
+
+- [FFmpeg](https://ffmpeg.org/) for the powerful video processing tools.
+- [Pillow](https://python-pillow.org/) for text and image manipulation.
+- [OpenCV](https://opencv.org/) for video frame handling.
+- The Python community for their excellent resources.
